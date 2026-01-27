@@ -1,22 +1,19 @@
-IMG_NAME = lab-node
-CTN_NAME = lab-container
-
 build:
-    docker build -t $(IMG_NAME) .
+    docker build -t lab-node .
 
 run:
-    docker run -it --name $(CTN_NAME) $(IMG_NAME)
+    docker run -it --name lab-container lab-node
 
 rerun:
-    docker rm -f $(CTN_NAME) || true
-    docker run -it --name $(CTN_NAME) $(IMG_NAME)
+    docker rm -f lab-container || true
+    docker run -it --name lab-container lab-node
 
 clean:
-    docker rm -f $(CTN_NAME) || true
-    docker rmi -f $(IMG_NAME) || true
+    docker rm -f lab-container || true
+    docker rmi -f lab-node || true
 
 ps:
     docker ps -a
 
 logs:
-    docker logs $(CTN_NAME)
+    docker logs lab-container
