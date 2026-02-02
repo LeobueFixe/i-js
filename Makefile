@@ -1,19 +1,13 @@
+COMMAND ?= start
+
+up:
+	docker compose up --build
+
 build:
-    docker build -t lab-node .
+	docker build -t g-javascript .
 
-run:
-    docker run -it --name lab-container lab-node
+run: build
+	docker run -it -v ${shell pwd}:/app g-javascript npm run ${COMMAND}
 
-rerun:
-    docker rm -f lab-container || true
-    docker run -it --name lab-container lab-node
-
-clean:
-    docker rm -f lab-container || true
-    docker rmi -f lab-node || true
-
-ps:
-    docker ps -a
-
-logs:
-    docker logs lab-container
+bash: build
+	docker run -it -v ${shell pwd}:/app g-javascript bash
