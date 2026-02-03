@@ -1,3 +1,4 @@
+//requisitos para usar o readline
 const readline = require("readline");
 
 const rl = readline.createInterface({
@@ -5,29 +6,44 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-function Menu() {
+//VERIFICAÇÕES
+
+function validNumber(valor, repetir) {
+  const n = Number(valor);
+  if (isNaN(n)) {
+    console.log("Valor inválido.");
+    return repetir();
+  }
+  return n;
+}
+
+//-----------------------------------------------------------------------------------------------//
+
+//MENU
+
+function menu() {
   console.log("\n MENU");
   console.log("1 - Par e Ímpar");
   console.log("2 - Ternários");
   console.log("3 - Múltiplos de 5");
-  console.log("4 - Número random multiplo de 3")
+  console.log("4 - Número random");
   console.log("0 - Sair");
 }
 
-function EscolherOpcao() {
+function escolherOpcao() {
   rl.question("Escolha uma opção: ", option => {
     switch(option) {
       case "1":
-        ParImpar();
+        parImpar();
         break;
       case "2":
-        Ternarios();
+        ternarios();
         break;
       case "3":
-        Multiplos();
+        multiplos();
         break;
       case "4":
-        Randoms_Multiplos();
+        randomsMultiplos();
         break;
       case "0":
         console.log("A sair...");
@@ -35,17 +51,22 @@ function EscolherOpcao() {
         break;
       default:
         console.log("Opção inválida.");
-        Menu();
-        EscolherOpcao();
+        menu();
+        escolherOpcao();
     }
   });
 }
 
-function ParImpar() {
-  let frase = ""; 
+//-----------------------------------------------------------------------------------------------//
 
+//ESCOLHAS
+
+function parImpar() {
   rl.question("Insira um número: ", value => {
-    value = Number(value);
+    value = validNumber(value, parImpar);
+    if (value === undefined) return;
+
+    let frase = "";
 
     if (value !== 15){
       frase += "Não é 15, ";
@@ -53,78 +74,75 @@ function ParImpar() {
       frase += "É 15, ";
     }
 
-    if (value > 10 && value < 20) {
-      frase += "está entre 10 e 20 ";
-    } else {
-      if (value < 0){
-        frase += "é um número negativo ";
-      } else {
-        frase += "é positivo mas fora dos parâmetros ";
-      }
-    }
-
-    if (value % 2 === 0) {
-      frase += "e é par.";
-    } else {
-      frase += "e é ímpar.";
-    }
+    frase += value >= 10 && value <= 20 ? "esta entre 10 e 20 " : "não esta entre 10 e 20 ";
+    frase += value % 2 === 0 ? "e é par." : "e é ímpar.";
 
     console.log(frase);
 
-    Menu();
-    EscolherOpcao();
+    menu();
+    escolherOpcao();
   });
 }
 
-function Ternarios() {
+function ternarios() {
   rl.question("O Bruno é um careca bacano? ", resp => {
     const resultado = resp.toLowerCase() === "sim" ? "Acertaste" : "Erraste";
     console.log(resultado);
 
-    Menu();
-    EscolherOpcao();
+    menu();
+    escolherOpcao();
   });
 }
 
-function Multiplos() {
+function multiplos() {
   rl.question("Insira um número: ", value => {
-    value = Number(value);
+    value = validNumber(value, multiplos);
+    if (value === undefined) return;
 
     if (value === 5 || value === 10 || value === 15){
-      console.log(value)
-      console.log("Fechando programa.")
+      console.log(value);
+      console.log("Fechando programa.");
       rl.close();
       process.exit();
     }
+
     if (value % 5 === 0) {
       console.log("É múltiplo de 5.");
     } else {
       console.log("Não é múltiplo de 5.");
     }
 
-    Menu();
-    EscolherOpcao();
+    menu();
+    escolherOpcao();
   });
 }
-function Randoms_Multiplos() {
-  rl.question("Insira o maior número que pode aparecer: ", max => {
-    const lista = [];
 
-    function create_Integers(max) {
-      return Math.floor(Math.random() * max) *3;  
-    }
-    
-    for (let i = 0; i < 100; i++) {
-      lista.push(create_Integers(max));
-    }
+function randomsMultiplos() {
+  rl.question("Insira a quantidade de números que vão ser criados: ", max => {
+    max = validNumber(max, randomsMultiplos);
+    if (max === undefined) return;
 
-    console.log(lista)
+    rl.question("Insira o número que vai ser o divisor: ", divisor => {
+      divisor = validNumber(divisor, randomsMultiplos);
+      if (divisor === undefined) return;
 
-  } )
-    
-  Menu();
-  EscolherOpcao();
+      const lista = [];
+
+      function create_Integers(divisor) {
+        return Math.floor(Math.random() * 100) * divisor;
+      }
+
+      for (let i = 0; i < max; i++) {
+        lista.push(create_Integers(divisor));
+      }
+
+      console.log(lista);
+
+      menu();
+      escolherOpcao();
+    });
+  });
 }
 
-Menu();
-EscolherOpcao();
+menu();
+escolherOpcao();
