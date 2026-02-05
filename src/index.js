@@ -1,5 +1,6 @@
 //requisitos para usar o readline
 const readline = require("readline");
+const { randomUUID } = require("crypto");
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -7,6 +8,13 @@ const rl = readline.createInterface({
 });
 
 //VERIFICAÇÕES
+
+//id
+
+function iD() {
+  return randomUUID();
+}
+
 
 //so números
 
@@ -22,8 +30,11 @@ function validNumber(valor, repetir) {
 //so texto
 
 function validString(valor, repetir) {
-  const texto = String(valor).trim();
+  if (valor === "") {
+    return "Anónimo";
+  }
 
+  const texto = String(valor).trim();
   if (texto.length === 0) {
     return "";
   }
@@ -50,7 +61,7 @@ function validCargo(valor, repetir) {
   }
 
   if (!validos.includes(texto)) {
-    console.log("Cargo inválido. Os cargos permitidos são: alunos, diretores, professores, funcionarios.");
+    console.log(`Cargo inválido. Os cargos permitidos são: ${validos}`);
     return repetir();
   }
 
@@ -193,50 +204,55 @@ function randomsMultiplos() {
 function escola(){
 
   const funcionarios = [
-    { name: "Alberto", surname: "Agustim" },
-    { name: "Joaquim", surname: "Pedro" },
-    { name: "Carla", surname: "Mendes" },
-    { name: "Rui", surname: "Figueira" },
-    { name: "Helena", surname: "Costa" }
+    { id: iD(), name: "Alberto", surname: "Agustim" },
+    { id: iD(), name: "Joaquim", surname: "Pedro" },
+    { id: iD(), name: "Carla", surname: "Mendes" },
+    { id: iD(), name: "Rui", surname: "Figueira" },
+    { id: iD(), name: "Helena", surname: "Costa" }
   ];
 
   const diretores = [
-    { name: "Rosa", surname: "Peres" },
-    { name: "Manuel", surname: "Gomes" }
+    { id: iD(), name: "Rosa", surname: "Peres" },
+    { id: iD(), name: "Manuel", surname: "Gomes" }
   ];
 
   const professores = [
-    { name: "Bruno", surname: "Alfredo", disciplina: "Português" },
-    { name: "Sofia", surname: "Lopes", disciplina: "Matemática" },
-    { name: "Tiago", surname: "Ferreira", disciplina: "Ciências" },
-    { name: "Ana", surname: "Ribeiro", disciplina: "Física e Química" }
+    { id: iD(), name: "Bruno", surname: "Alfredo", disciplina: "Português" },
+    { id: iD(), name: "Sofia", surname: "Lopes", disciplina: "Matemática" },
+    { id: iD(), name: "Tiago", surname: "Ferreira", disciplina: "Ciências" },
+    { id: iD(), name: "Ana", surname: "Ribeiro", disciplina: "Física e Química" }
   ];
 
   const alunos = [
     {
+      id: iD(),
       name: "Miguel",
       surname: "",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
       notas: [12, 15, 14, 10]
     },
     {
+      id: iD(),
       name: "Érica",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
       notas: [20, 18, 19, 19] 
     },
     {
+      id: iD(),
       name: "Carolina",
       surname: "Martins",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
       notas: [4, 12 ,9, 18] 
     },
     {
+      id: iD(),
       name: "Diego",
       surname: "Silva",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
       notas: [14, 16, 18, 17]
     },
     {
+      id: iD(),
       name: "Constança",
       surname: "Pires",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
@@ -312,6 +328,7 @@ function escola(){
   }
 
   function comCargo(name, surname, cargo) {
+
     switch (cargo) {
 
       case "alunos":
@@ -319,12 +336,17 @@ function escola(){
         break;
 
       case "professores":
-      case "diretores":
-      case "funcionarios":
-        console.log("Registado.");
-        menuEscola();
-        opcaoEscola();
+        cProfessores(name, surname);
         break;
+
+      case "diretores":
+        cDiretores(name, surname);
+        break;
+
+      case "funcionarios":
+        cFuncionarios(name, surname);
+        break;
+
     }
   }
 
@@ -332,6 +354,7 @@ function escola(){
     const disciplinas = ["Português", "Matemática", "Ciências", "Física e Química"];
     const notas = [];
     let contador = 0;
+    const id = iD();
 
     function calcularMedia(notas) {
       const soma = notas.reduce((a, b) => a + b, 0);
@@ -342,6 +365,7 @@ function escola(){
       if (contador >= disciplinas.length) {
 
         const aluno = {
+          id,
           name,
           surname,
           disciplinas,
@@ -350,9 +374,9 @@ function escola(){
         };
 
         alunos.push(aluno);
-        console.log("Média:", aluno.media.toFixed(2));
 
-        console.log("Aluno registado com sucesso!");
+        console.log("Média:", aluno.media.toFixed(2));
+        console.log("Aluno adicionado com sucesso!");
 
         menuEscola();
         opcaoEscola();
@@ -361,7 +385,11 @@ function escola(){
 
       rl.question(`Insira a nota de ${disciplinas[contador]}: `, valor => {
         const nota = validNumber(valor, addNotas);
-        if (nota === undefined) return;
+
+        if (nota === undefined || nota < 0 || nota > 20) {
+          console.log("Nota inválida, tente novamente.");
+          return addNotas(); // <-- repete apenas esta disciplina
+        }
 
         notas.push(nota);
         contador++;
@@ -370,6 +398,39 @@ function escola(){
     }
 
     addNotas();
+  }
+
+  function cProfessores(name, surname) {
+    const disciplinas = ["Português", "Matemática", "Ciências", "Física e Química"];
+    const id = iD();
+
+    rl.question("Insira a Disciplina: ", disciplina => {
+      if (disciplinas.includes(disciplina)) {
+        professores.push(id, name, surname, disciplina);
+        console.log("Professor adicionado com sucesso!");
+        menuEscola();
+        opcaoEscola();
+      } else {
+        console.log(`Disciplina inválida, estas são as disciplinas validas: \n${disciplinas}`);
+        return cProfessores(name, surname);
+      }
+    });
+  }
+
+  function cDiretores(name, surname) {
+    const id = iD();
+    diretores.push(id, name, surname);
+    console.log("Diretor adicionado com sucesso!");
+    menuEscola();
+    opcaoEscola();
+  }
+
+  function cFuncionarios(name, surname) {
+    const id = iD();
+    funcionarios.push(id, name, surname);
+    console.log("Funcionario adicionado com sucesso!");
+    menuEscola();
+    opcaoEscola();
   }
 
   function criar() {
@@ -381,9 +442,7 @@ function escola(){
 
   function listar() {
     rl.question("Que cargo deseja listar (alunos, professores, diretores, funcionarios): ", valor => {
-      const cargo = validCargo(valor, listar);
-
-      console.log("\n====================================");
+      const cargo = valor;
 
       switch (cargo) {
 
@@ -391,18 +450,20 @@ function escola(){
           console.log("           LISTA DE ALUNOS");
           console.log("====================================");
 
-          alunos.forEach((aluno, i) => {
-            const nome = aluno.name || "(sem nome)";
-            const sobrenome = aluno.surname || "";
-            const media = aluno.media?.toFixed(2) || "N/A";
+          alunos.forEach((a, i) => {
+            const id = a.id;
+            const nome = a.name || "(sem nome)";
+            const sobrenome = a.surname || "(sem nome)";
+            const media = a.media?.toFixed(2) || "N/A";
 
-            console.log(`\n${i + 1}. Nome: ${nome}`);
-            console.log(`   Sobrenome: ${sobrenome}`);
-            console.log(`   Cargo: Aluno`);
+            console.log(`\n${i + 1}. id: ${id}`);
+            console.log(`   Nome: ${nome}`);
+            console.log(`   Sobrenome: ${sobrenome}`)
+            console.log("   Cargo: Aluno");
             console.log("   Disciplinas e Notas:");
 
-            aluno.disciplinas.forEach((disc, idx) => {
-              const nota = aluno.notas[idx] ?? "—";
+            a.disciplinas.forEach((disc, idx) => {
+              const nota = a.notas[idx] ?? "—";
               console.log(`     • ${disc.padEnd(18)} → ${nota}`);
             });
 
@@ -416,9 +477,10 @@ function escola(){
           console.log("====================================");
 
           professores.forEach((p, i) => {
-            console.log(`\n${i + 1}. Nome: ${p.name}`);
+            console.log(`\n${i + 1}. ID: ${p.id}`);
+            console.log(`   Nome: ${p.name}`);
             console.log(`   Sobrenome: ${p.surname}`);
-            console.log(`   Cargo: Professor`);
+            console.log("   Cargo: Professor");
             console.log(`   Disciplina: ${p.disciplina}`);
             console.log("------------------------------------");
           });
@@ -429,7 +491,8 @@ function escola(){
           console.log("====================================");
 
           diretores.forEach((d, i) => {
-            console.log(`\n${i + 1}. Nome: ${d.name}`);
+            console.log(`\n${i + 1}. ID: ${d.id}`);
+            console.log(`   Nome: ${d.name}`);
             console.log(`   Sobrenome: ${d.surname}`);
             console.log(`   Cargo: Diretor`);
             console.log("------------------------------------");
@@ -441,12 +504,17 @@ function escola(){
           console.log("====================================");
 
           funcionarios.forEach((f, i) => {
-            console.log(`\n${i + 1}. Nome: ${f.name}`);
+            console.log(`\n${i + 1}. ID: ${f.id}`);
+            console.log(`   Nome: ${f.name}`);
             console.log(`   Sobrenome: ${f.surname}`);
             console.log(`   Cargo: Funcionário`);
             console.log("------------------------------------");
           });
           break;
+        
+          default:
+            console.log("Cargo invalido, por favor escolha um cargo valido.")
+            return listar();
       }
 
       console.log("====================================\n");
@@ -513,10 +581,7 @@ function escola(){
   function editar() {
     listarTodos();
     rl.question("Insira o nome: ", name => {
-      name = validString(name, editar);
-
       rl.question("Insira o sobrenome: ", surname => {
-        surname = validString(surname, () => editar());
 
         procurar(name, surname);
       })
@@ -576,7 +641,7 @@ function escola(){
     rl.question(`Novo nome (${pessoa.name}): `, novoNome => {
       if (novoNome.trim() !== "") pessoa.name = novoNome;
 
-      rl.question(`Novo surname (${pessoa.surname || ""}): `, novoSurname => {
+      rl.question(`Novo sobrenome (${pessoa.surname || ""}): `, novoSurname => {
         if (novoSurname.trim() !== "") pessoa.surname = novoSurname;
 
         if (tipo === "aluno") {
@@ -606,11 +671,21 @@ function escola(){
       const notaAtual = aluno.notas[i];
 
       rl.question(`Nova nota de ${disc} (${notaAtual}): `, valor => {
-        if (valor.trim() !== "") {
-          const nota = validNumber(valor, editarNota);
-          if (nota !== undefined) aluno.notas[i] = nota;
+        // Se der enter, não muda
+        if (valor.trim() === "") {
+          i++;
+          return editarNota();
         }
 
+        const nota = Number(valor);
+
+        // Validação correta
+        if (isNaN(nota) || nota < 0 || nota > 20) {
+          console.log("Nota inválida. A nota deve estar entre 0 e 20.");
+          return editarNota(); //repeta a mesma pergunta
+        }
+
+        aluno.notas[i] = nota;
         i++;
         editarNota();
       });
@@ -618,6 +693,7 @@ function escola(){
 
     editarNota();
   }
+
 
   menuEscola();
   opcaoEscola();

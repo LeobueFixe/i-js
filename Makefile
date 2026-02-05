@@ -11,3 +11,6 @@ run: build
 
 bash: build
 	docker run -it -v ${shell pwd}:/app g-javascript bash
+
+delete: 
+	docker system prune -a
