@@ -11,7 +11,7 @@ const rl = readline.createInterface({
 
 //id
 
-function iD() {
+function criarID() {
   return randomUUID();
 }
 
@@ -204,55 +204,55 @@ function randomsMultiplos() {
 function escola(){
 
   const funcionarios = [
-    { id: iD(), name: "Alberto", surname: "Agustim" },
-    { id: iD(), name: "Joaquim", surname: "Pedro" },
-    { id: iD(), name: "Carla", surname: "Mendes" },
-    { id: iD(), name: "Rui", surname: "Figueira" },
-    { id: iD(), name: "Helena", surname: "Costa" }
+    { id: criarID(), name: "Alberto", surname: "Agustim" },
+    { id: criarID(), name: "Joaquim", surname: "Pedro" },
+    { id: criarID(), name: "Carla", surname: "Mendes" },
+    { id: criarID(), name: "Rui", surname: "Figueira" },
+    { id: criarID(), name: "Helena", surname: "Costa" }
   ];
 
   const diretores = [
-    { id: iD(), name: "Rosa", surname: "Peres" },
-    { id: iD(), name: "Manuel", surname: "Gomes" }
+    { id: criarID(), name: "Rosa", surname: "Peres" },
+    { id: criarID(), name: "Manuel", surname: "Gomes" }
   ];
 
   const professores = [
-    { id: iD(), name: "Bruno", surname: "Alfredo", disciplina: "Português" },
-    { id: iD(), name: "Sofia", surname: "Lopes", disciplina: "Matemática" },
-    { id: iD(), name: "Tiago", surname: "Ferreira", disciplina: "Ciências" },
-    { id: iD(), name: "Ana", surname: "Ribeiro", disciplina: "Física e Química" }
+    { id: criarID(), name: "Bruno", surname: "Alfredo", disciplina: "Português" },
+    { id: criarID(), name: "Sofia", surname: "Lopes", disciplina: "Matemática" },
+    { id: criarID(), name: "Tiago", surname: "Ferreira", disciplina: "Ciências" },
+    { id: criarID(), name: "Ana", surname: "Ribeiro", disciplina: "Física e Química" }
   ];
 
   const alunos = [
     {
-      id: iD(),
+      id: criarID(),
       name: "Miguel",
       surname: "",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
       notas: [12, 15, 14, 10]
     },
     {
-      id: iD(),
+      id: criarID(),
       name: "Érica",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
       notas: [20, 18, 19, 19] 
     },
     {
-      id: iD(),
+      id: criarID(),
       name: "Carolina",
       surname: "Martins",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
       notas: [4, 12 ,9, 18] 
     },
     {
-      id: iD(),
+      id: criarID(),
       name: "Diego",
       surname: "Silva",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
       notas: [14, 16, 18, 17]
     },
     {
-      id: iD(),
+      id: criarID(),
       name: "Constança",
       surname: "Pires",
       disciplinas: ["Português", "Matemática", "Ciências", "Física e Química"],
@@ -269,7 +269,6 @@ function escola(){
   alunos.forEach(aluno => {
     aluno.media = calcularMedia(aluno.notas);
   });
-
   
   function menuEscola() {
     console.log("\n MENU");
@@ -348,13 +347,14 @@ function escola(){
         break;
 
     }
+
   }
 
   function cAluno(name, surname) {
     const disciplinas = ["Português", "Matemática", "Ciências", "Física e Química"];
     const notas = [];
     let contador = 0;
-    const id = iD();
+    const id = criarID();
 
     function calcularMedia(notas) {
       const soma = notas.reduce((a, b) => a + b, 0);
@@ -402,11 +402,19 @@ function escola(){
 
   function cProfessores(name, surname) {
     const disciplinas = ["Português", "Matemática", "Ciências", "Física e Química"];
-    const id = iD();
+    const id = criarID();
 
     rl.question("Insira a Disciplina: ", disciplina => {
       if (disciplinas.includes(disciplina)) {
-        professores.push(id, name, surname, disciplina);
+        
+        const professor = {
+          id,
+          name,
+          surname,
+          disciplina
+        }
+
+        professores.push(professor);
         console.log("Professor adicionado com sucesso!");
         menuEscola();
         opcaoEscola();
@@ -418,16 +426,28 @@ function escola(){
   }
 
   function cDiretores(name, surname) {
-    const id = iD();
-    diretores.push(id, name, surname);
+    const id = criarID();
+    const diretor = {
+      id,
+      name,
+      surname
+    }
+
+    diretores.push(diretor);
     console.log("Diretor adicionado com sucesso!");
     menuEscola();
     opcaoEscola();
   }
 
   function cFuncionarios(name, surname) {
-    const id = iD();
-    funcionarios.push(id, name, surname);
+    const id = criarID();
+    const funcionario = {
+      id,
+      name,
+      surname
+    }
+
+    funcionarios.push(funcionario);
     console.log("Funcionario adicionado com sucesso!");
     menuEscola();
     opcaoEscola();
@@ -440,6 +460,11 @@ function escola(){
   //---------------------------------------------------------------------------------------------------------------//
   //LISTAR 
 
+  function aprovado(media) {
+    const passou = media >= 10 ? "Aprovado" : "Reprovado";
+    return passou;
+  }
+
   function listar() {
     rl.question("Que cargo deseja listar (alunos, professores, diretores, funcionarios): ", valor => {
       const cargo = valor;
@@ -450,13 +475,14 @@ function escola(){
           console.log("           LISTA DE ALUNOS");
           console.log("====================================");
 
-          alunos.forEach((a, i) => {
+          alunos.forEach((a) => {
             const id = a.id;
             const nome = a.name || "(sem nome)";
             const sobrenome = a.surname || "(sem nome)";
             const media = a.media?.toFixed(2) || "N/A";
+            const passou = aprovado(media);
 
-            console.log(`\n${i + 1}. id: ${id}`);
+            console.log(`   ID: ${id}`);
             console.log(`   Nome: ${nome}`);
             console.log(`   Sobrenome: ${sobrenome}`)
             console.log("   Cargo: Aluno");
@@ -467,7 +493,7 @@ function escola(){
               console.log(`     • ${disc.padEnd(18)} → ${nota}`);
             });
 
-            console.log(`   Média: ${media}`);
+            console.log(`   Média: ${media} || ${passou}`);
             console.log("------------------------------------");
           });
           break;
@@ -476,8 +502,8 @@ function escola(){
           console.log("        LISTA DE PROFESSORES");
           console.log("====================================");
 
-          professores.forEach((p, i) => {
-            console.log(`\n${i + 1}. ID: ${p.id}`);
+          professores.forEach((p) => {
+            console.log(`   ID: ${p.id}`);
             console.log(`   Nome: ${p.name}`);
             console.log(`   Sobrenome: ${p.surname}`);
             console.log("   Cargo: Professor");
@@ -490,8 +516,8 @@ function escola(){
           console.log("         LISTA DE DIRETORES");
           console.log("====================================");
 
-          diretores.forEach((d, i) => {
-            console.log(`\n${i + 1}. ID: ${d.id}`);
+          diretores.forEach((d) => {
+            console.log(`   ID: ${d.id}`);
             console.log(`   Nome: ${d.name}`);
             console.log(`   Sobrenome: ${d.surname}`);
             console.log(`   Cargo: Diretor`);
@@ -503,8 +529,8 @@ function escola(){
           console.log("       LISTA DE FUNCIONÁRIOS");
           console.log("====================================");
 
-          funcionarios.forEach((f, i) => {
-            console.log(`\n${i + 1}. ID: ${f.id}`);
+          funcionarios.forEach((f) => {
+            console.log(`   ID: ${f.id}`);
             console.log(`   Nome: ${f.name}`);
             console.log(`   Sobrenome: ${f.surname}`);
             console.log(`   Cargo: Funcionário`);
@@ -532,11 +558,11 @@ function escola(){
     // ALUNOS
     console.log("-------------- ALUNOS --------------");
 
-    alunos.forEach((aluno, i) => {
+    alunos.forEach((aluno) => {
       const nome = aluno.name || "(sem nome)";
       const sobrenome = aluno.surname || "";
 
-      console.log(`\n${i + 1}. Nome: ${nome}`);
+      console.log(`   Nome: ${nome}`);
       console.log(`   Sobrenome: ${sobrenome}`);
       console.log(`   Cargo: Aluno`);
     });
@@ -544,8 +570,8 @@ function escola(){
     // PROF
     console.log("\n----------- PROFESSORES ------------");
 
-    professores.forEach((p, i) => {
-      console.log(`\n${i + 1}. Nome: ${p.name}`);
+    professores.forEach((p) => {
+      console.log(`   Nome: ${p.name}`);
       console.log(`   Sobrenome: ${p.surname}`);
       console.log(`   Cargo: Professor`);
       console.log("------------------------------------");
@@ -554,8 +580,8 @@ function escola(){
     // DIRETORES
     console.log("\n------------ DIRETORES -------------");
 
-    diretores.forEach((d, i) => {
-      console.log(`\n${i + 1}. Nome: ${d.name}`);
+    diretores.forEach((d) => {
+      console.log(`   Nome: ${d.name}`);
       console.log(`   Sobrenome: ${d.surname}`);
       console.log(`   Cargo: Diretor`);
       console.log("------------------------------------");
@@ -564,8 +590,8 @@ function escola(){
     // FUNCIONARIOS
     console.log("\n----------- FUNCIONÁRIOS -----------");
 
-    funcionarios.forEach((f, i) => {
-      console.log(`\n${i + 1}. Nome: ${f.name}`);
+    funcionarios.forEach((f) => {
+      console.log(`   Nome: ${f.name}`);
       console.log(`   Sobrenome: ${f.surname}`);
       console.log(`   Cargo: Funcionário`);
       console.log("------------------------------------");
@@ -656,10 +682,10 @@ function escola(){
   }
 
   function eNotas(aluno) {
-    let i = 0;
+    let contador = 0;
 
     function editarNota() {
-      if (i >= aluno.disciplinas.length) {
+      if (contador >= aluno.disciplinas.length) {
         aluno.media = calcularMedia(aluno.notas);
         console.log("Notas atualizadas.");
         menuEscola();
@@ -667,13 +693,13 @@ function escola(){
         return;
       }
 
-      const disc = aluno.disciplinas[i];
-      const notaAtual = aluno.notas[i];
+      const disc = aluno.disciplinas[contador];
+      const notaAtual = aluno.notas[contador];
 
       rl.question(`Nova nota de ${disc} (${notaAtual}): `, valor => {
         // Se der enter, não muda
         if (valor.trim() === "") {
-          i++;
+          contador++;
           return editarNota();
         }
 
@@ -685,8 +711,8 @@ function escola(){
           return editarNota(); //repeta a mesma pergunta
         }
 
-        aluno.notas[i] = nota;
-        i++;
+        aluno.notas[contador] = nota;
+        contador++;
         editarNota();
       });
     }
