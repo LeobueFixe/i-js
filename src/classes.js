@@ -52,16 +52,58 @@ class Product {
 
 
     info() {
+        return `${this.name} | ${this.manufacturer} | ${this.price}€`;
+    }
+
+}
+
+class Carrinho {
+    constructor(guardarID = [], guardarPrice = []) {
+        this.guardarID = guardarID;
+        this.guardarPrice = guardarPrice;
+    }
+
+    adicionarProduto(id, preco) {
+        this.guardarID.push(id);
+        this.guardarPrice.push(preco);
+    }
+
+}
+
+class Caixa {
+    constructor(carrinho) {
+        this.carrinho = carrinho;
+    }
+
+    fecharConta() {
+        let total = this.carrinho.guardarPrice.reduce((a, b) => a + b, 0);
+
+        if (total > 500) {
+            total *= 0.9; // 10% desconto
+        }
+
+        // Construir lista de produtos
+        let lista = "";
+        this.carrinho.guardarID.forEach(id => {
+            const produto = products.find(p => p.id === id);
+            if (produto) {
+                lista += `${produto.name} | ${produto.manufacturer} | ${produto.price}€\n`;
+            }
+        });
+
         return `
-ID: ${this.id}
-Nome: ${this.name}
-Preço: ${this.price}€
-Stock: ${this.stock}
-Fabricante: ${this.manufacturer}
-Categoria: ${this.category}
-        `;
+____________________________________________________________
+=========================== TALÃO ===========================
+
+Produtos:
+${lista}
+Total: ${total.toFixed(2)}€
+
+============================================================
+`;
     }
 }
+
 
 //listas
 const categoriasBase = [
@@ -73,6 +115,8 @@ const fabricantesBase = [
     "Sony", "Samsung", "Apple", "Microsoft", "Lenovo",
     "Asus", "Nike", "Adidas", "Philips", "LG"
 ].map(normalizarTexto);
+
+const carrinho = new Carrinho();
 
 //items
 const products = [
@@ -101,6 +145,7 @@ Menu
 4. Pesquisar por categoria
 5. Pesquisar por fabricante
 6. Pagar em parcelas
+7. Pagar total
 0. Sair
 `);
 
@@ -112,6 +157,7 @@ Menu
             case "4": pesquisarCategoria(); break;
             case "5": pesquisarFabricante(); break;
             case "6": dividirParcelas(); break;
+            case "7": pagar(); break;
             case "0": rl.close(); break;
             default:
                 console.log("Opção inválida");
@@ -227,7 +273,7 @@ function listarProdutos() {
     } else {
         products.forEach(p => console.log(p.info()));
     }
-    menu();
+    adicionarAoCarrinho();
 }
 
 function pesquisarPreco() {
@@ -247,7 +293,7 @@ function pesquisarPreco() {
             if (resultados.length === 0) console.log("Nenhum produto encontrado.");
             else resultados.forEach(p => console.log(p.info()));
 
-            menu();
+            adicionarAoCarrinho();
         });
     });
 }
@@ -266,7 +312,7 @@ function pesquisarCategoria() {
         if (resultados.length === 0) console.log("Nenhum produto encontrado.");
         else resultados.forEach(p => console.log(p.info()));
 
-        menu();
+        adicionarAoCarrinho();
     });
 }
 
@@ -285,13 +331,16 @@ function pesquisarFabricante() {
         if (resultados.length === 0) console.log("Nenhum produto encontrado.");
         else resultados.forEach(p => console.log(p.info()));
 
-        menu();
+        adicionarAoCarrinho();
     });
 }
 
 function dividirParcelas() {
-    rl.question("ID do produto: ", id => {
-        const produto = products.find(p => p.id == id);
+    rl.question("ID ou nome do produto: ", value => {
+
+        const produto = products.find(p =>
+            p.id == value || p.name.toLowerCase() === value.toLowerCase()
+        );
 
         if (!produto) {
             console.log("Produto não encontrado.");
@@ -311,6 +360,38 @@ function dividirParcelas() {
     });
 }
 
+function adicionarAoCarrinho() {
+    rl.question("Deseja adicionar algum produto ao carrinho (sim/nao): ", resp => {
 
+        if (resp.toLowerCase() === "sim" || resp.toLowerCase() === "s") {
+
+            rl.question("Insira o nome do produto ou o ID: ", value => {
+
+                const produto = products.find(p =>
+                    p.id == value || p.name.toLowerCase() === value.toLowerCase()
+                );
+
+                if (!produto) {
+                    console.log("Produto não encontrado.");
+                    return adicionarAoCarrinho();
+                }
+
+                carrinho.adicionarProduto(produto.id, produto.price);
+
+                console.log("Produto adicionado com sucesso!");
+
+                return adicionarAoCarrinho();
+            });
+
+        } else {
+            menu();
+        }
+    });
+}
+
+function pagar() {
+    const conta = new Caixa(carrinho);
+    console.log(conta.fecharConta());
+}
 
 menu();
