@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/classes.js"
+    "start": "node src/index.js",
+    "classes": "node src/classes.js",
+    "final": "node src/final/index.js"
   },
   "description": "",
   "repository": {
@@ -17,5 +19,9 @@
   "bugs": {
     "url": "https://github.com/LeobueFixe/i-js/issues"
   },
-  "homepage": "https://github.com/LeobueFixe/i-js#readme"
+  "homepage": "https://github.com/LeobueFixe/i-js#readme",
+  "dependencies": {
+    "node": "^25.6.1",
+    "sqlite3": "^5.1.7"
+  }
 }

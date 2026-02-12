@@ -1,8 +1,11 @@
-FROM node
+FROM node:20
 
-WORKDIR /app
-COPY ./src /app/src
+WORKDIR /usr/src/app
 
-RUN npm install -g npm@11.8.0
+COPY package*.json ./
 
-CMD ["bash"]
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "start"]

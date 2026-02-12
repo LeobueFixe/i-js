@@ -5,70 +5,147 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
-
-//valida o texto
-function normalizarTexto(txt) {
-    return txt
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, " ")
-        .replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+function codeCategoria(cat) {
+  return cat
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/)
+    .replace(/\s+/g, "")
+    .substring(0, 3)
+    .toUpperCase();
 }
 
-//so texto
-function validarTexto(txt) {
-    return /^[A-Za-zÀ-ÿ\s]+$/.test(txt);
+function generateSKU(category) {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+
+    if (category === null) {
+        return random;
+    }
+    if(category === "cart") {
+        return `cart-${random}`;
+    }
+    
+    const code = codeCategoria(category);
+    return `${code}-${timestamp}-${random}`;
+}
+
+
+function validText(valor, repetir) {
+  let texto = String(valor).trim();
+
+  const apenasTexto = /^[A-Za-zÀ-ÿ\s]+$/;
+  if (!apenasTexto.test(texto)) {
+    console.log("Apenas letras e espaços são permitidos.");
+    return repetir(); 
+  }
+
+  texto = texto.toLowerCase().replace(/\s+/g, " ").replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+
+  return texto;
+}
+
+
+function validNumber(valor, repetir) {
+  const numero = Number(valor);
+  if (isNaN(numero)) {
+    console.log("Valor inválido.");
+    return repetir();
+  }
+  return Math.round(numero);
 }
 
 //class e constructor
+class Stock {
+    constructor() {
+        this.itens = new Map();
+    }
+
+    adicionar(id, quantidade) {
+        const atual = this.itens.get(id) || 0;
+        this.itens.set(id, atual + quantidade);
+    }
+
+    remover(id, quantidade) {
+        const atual = this.itens.get(id) || 0;
+        if (quantidade > atual) throw new Error("Stock insuficiente");
+        this.itens.set(id, atual - quantidade);
+    }
+
+    getQuantidade(id) {
+        return this.itens.get(id) || 0;
+    }
+}
+
+
 class Product {
-    constructor(id, name, price, stock = 0, maxParcelas = 1, manufacturer, category) {
-        this.id = id;
-        this.name = normalizarTexto(name);
+    constructor(name, price, maxParcelas, manufacturer, category) {
+        this.id = generateSKU(category);
+        this.name = name;
         this.price = price;
-        this.stock = stock;
         this.maxParcelas = maxParcelas;
-        this.manufacturer = normalizarTexto(manufacturer);
-        this.category = normalizarTexto(category);
+        this.manufacturer = manufacturer;
+        this.category = category;
+        this.finalPrice = price * (1 + CATEGORIAS[category].iva);
     }
-    calcParcelas(parcelas) {
-        if (isNaN(parcelas) || parcelas < 1) {
-            return "Número de parcelas inválido.";
-        }
-
-        if (parcelas > this.maxParcelas) {
-            return `Máximo permitido: ${this.maxParcelas} parcelas.`;
-        }
-
-        const valorParcela = this.price / parcelas;
-
-        return `
-    Produto: ${this.name}
-    Preço total: ${this.price}€
-    Parcelas: ${parcelas}x sem juros
-    Valor de cada parcela: ${valorParcela.toFixed(2)}€
-        `;
-    }
-
 
     info() {
-        return `${this.name} | ${this.manufacturer} | ${this.price}€`;
+        return `${this.name} | ${this.manufacturer} | ${this.category} | ${this.stock} unidades | ${this.maxParcelas}x | ${this.finalPrice}€`;
+    }
+
+}
+
+class SistemaLoja {
+    constructor(estoque, carrinho) {
+        this.estoque = estoque;
+        this.carrinho = carrinho;
+    }
+
+    adicionarProduto(userType, sku, quantidade = 1) {
+        if (userType === "admin") {
+            this.estoque.adicionar(sku, quantidade);
+        } else {
+            this.carrinho.adicionarProduto(sku);
+        }
+    }
+
+    removerProduto(userType, sku, quantidade = 1) {
+        if (userType === "admin") {
+            this.estoque.remover(sku, quantidade);
+        } else {
+            this.carrinho.removerProduto(sku);
+        }
+    }
+}
+
+class User {
+    constructor(name, role, type, points) {
+        this.id = generateSKU();
+        this.name = name;
+        this.role = role;
+        this.type = type;
+        this.points = points;
     }
 
 }
 
 class Carrinho {
-    constructor(guardarID = [], guardarPrice = []) {
-        this.guardarID = guardarID;
-        this.guardarPrice = guardarPrice;
+    constructor() {
+        this.id = generateSKU("cart");
+        this.itens = [];
     }
 
-    adicionarProduto(id, preco) {
-        this.guardarID.push(id);
-        this.guardarPrice.push(preco);
+    adicionarProduto(id) {
+        this.itens.push(id);
     }
 
+    removerProduto(id) {
+        const index = this.itens.indexOf(id);
+        if (index !== -1) {
+            this.itens.splice(index, 1);
+        }
+    }
 }
+
 
 class Caixa {
     constructor(carrinho) {
@@ -87,7 +164,7 @@ class Caixa {
         this.carrinho.guardarID.forEach(id => {
             const produto = products.find(p => p.id === id);
             if (produto) {
-                lista += `${produto.name} | ${produto.manufacturer} | ${produto.price}€\n`;
+                lista += `${produto.name} | ${produto.manufacturer} | ${produto.finalPrice}€\n`;
             }
         });
 
@@ -104,33 +181,35 @@ Total: ${total.toFixed(2)}€
     }
 }
 
-
 //listas
-const categoriasBase = [
-    "Eletrónicos", "Roupas", "Livros", "Jogos", "Móveis",
-    "Ferramentas", "Cozinha", "Brinquedos", "Desporto", "Beleza"
-].map(normalizarTexto);
+const CATEGORIAS = {
+    "eletrodoméstico": {
+        iva: 0.23,
+        fabricantes: ["Bosch", "Samsung", "LG", "Whirlpool", "Siemens", "Miele"]
+    },
 
-const fabricantesBase = [
-    "Sony", "Samsung", "Apple", "Microsoft", "Lenovo",
-    "Asus", "Nike", "Adidas", "Philips", "LG"
-].map(normalizarTexto);
+    "decoração": {
+        iva: 0.23,
+        fabricantes: ["IKEA", "Casa", "Zara Home", "H&M Home", "Kave Home", "Maisons du Monde"]
+    },
+
+    "materiais de construção": {
+        iva: 0.23,
+        fabricantes: ["Leroy Merlin", "Sika", "Weber", "Knauf", "Bosch Professional", "Makita"]
+    },
+
+    "vestuário": {
+        iva: 0.23,
+        fabricantes: ["Nike", "Adidas", "Zara", "H&M", "Pull&Bear", "Levi's"]
+    },
+
+    "alimentos": {
+        iva: 0.06,
+        fabricantes: ["Nestlé", "Danone", "Compal", "Milka", "Delta", "Matutano"]
+    }
+};
 
 const carrinho = new Carrinho();
-
-//items
-const products = [
-    new Product(1, "Televisão 4K", 799, 12, 12, "Samsung", "Eletrónicos"),
-    new Product(2, "Portátil Gaming", 1299, 8, 10, "Asus", "Eletrónicos"),
-    new Product(3, "Camisola Desportiva", 29, 50, 3, "Nike", "Roupas"),
-    new Product(4, "Smartphone Pro", 999, 15, 12, "Apple", "Eletrónicos"),
-    new Product(5, "Martelo Profissional", 19, 40, 2, "Philips", "Ferramentas"),
-    new Product(6, "Livro Fantasia", 14, 100, 1, "LG", "Livros"),
-    new Product(7, "Cadeira Escritório", 89, 20, 5, "Lenovo", "Móveis"),
-    new Product(8, "Jogo Aventura", 59, 30, 4, "Microsoft", "Jogos"),
-    new Product(9, "Frigideira Antiaderente", 24, 60, 3, "Philips", "Cozinha"),
-    new Product(10, "Boneco Articulado", 15, 80, 2, "Sony", "Brinquedos")
-];
 
 
 //menu
@@ -182,7 +261,7 @@ function adicionarProduto() {
 
     function pedirNome(id) {
         rl.question("Nome: ", name => {
-            if (!validarTexto(name)) {
+            if (!validText(name)) {
                 console.log("Nome inválido. Não pode conter números.");
                 return pedirNome(id);
             }
@@ -222,10 +301,10 @@ function adicionarProduto() {
 
     function pedirManufacturer(id, name, price, stock, maxParcelas) {
         console.log("\nFabricantes disponíveis:");
-        fabricantesBase.forEach(f => console.log("- " + f));
+        .forEach(f => console.log("- " + f));
 
         rl.question("Fabricante: ", manufacturer => {
-            if (!validarTexto(manufacturer)) {
+            if (!validText(manufacturer)) {
                 console.log("Fabricante inválido.");
                 return pedirManufacturer(id, name, price, stock, maxParcelas);
             }
@@ -238,29 +317,28 @@ function adicionarProduto() {
 
     function pedirCategory(id, name, price, stock, maxParcelas, manufacturer) {
         console.log("\nCategorias disponíveis:");
-        categoriasBase.forEach(c => console.log("- " + c));
+        CATEGORIAS.forEach(c => console.log("- " + c));
 
         rl.question("Categoria: ", category => {
-            if (!validarTexto(category)) {
-                console.log("Categoria inválida.");
-                return pedirCategory(id, name, price, stock, maxParcelas, manufacturer);
+            if (CATEGORIAS.includes(category)) {
+
+                const p = new Product(
+                    id,
+                    name,
+                    price,
+                    stock,
+                    maxParcelas,
+                    manufacturer,
+                    category
+                );
+
+                products.push(p);
+                console.log("Produto adicionado com sucesso!");
+                menu();
             }
+            
+            return pedirCategory();
 
-            category = normalizarTexto(category);
-
-            const p = new Product(
-                id,
-                name,
-                price,
-                stock,
-                maxParcelas,
-                manufacturer,
-                category
-            );
-
-            products.push(p);
-            console.log("Produto adicionado com sucesso!");
-            menu();
         });
     }
 
