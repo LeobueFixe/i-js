@@ -59,12 +59,12 @@ class Stock {
         this.itens = new Map();
     }
 
-    adicionar(id, quantidade) {
+    adicionarQuantidade(id, quantidade) {
         const atual = this.itens.get(id) || 0;
         this.itens.set(id, atual + quantidade);
     }
 
-    remover(id, quantidade) {
+    removerQuantidade(id, quantidade) {
         const atual = this.itens.get(id) || 0;
         if (quantidade > atual) throw new Error("Stock insuficiente");
         this.itens.set(id, atual - quantidade);
@@ -73,6 +73,17 @@ class Stock {
     getQuantidade(id) {
         return this.itens.get(id) || 0;
     }
+
+    getDisponibilidade(id) {
+        const atual = this.itens.get(id);
+
+        if (!atual) {
+            console.log("O stock está vazio ou não existe.");
+        } else {
+            console.log(`Ainda está disponível: ${atual} unidades.`);
+        }
+    }
+    
 }
 
 class Product {
@@ -81,7 +92,7 @@ class Product {
         this.name = name;
         this.price = price;
         this.maxParcelas = maxParcelas;
-        this.manufacturer = manufacturer;
+        this.manufactur = manufacturer;
         this.category = category;
         this.finalPrice = price * (1 + CATEGORIAS[category].iva);
     }
@@ -102,175 +113,174 @@ class User {
         this.points = points;
     }
 
+    adicionarPontos(points, conta) {
+        const eurosPorPonto = 10;
+        const pontosGanhos = Math.floor(conta / eurosPorPonto);
+
+        return points + pontosGanhos;
+    }
+
+    resgatarPontos(points, valorConta) {
+        const pontosPorEuro = 20;
+
+        const desconto = Math.floor(points / pontosPorEuro);
+        const valorFinal = Math.max(0, valorConta - desconto);
+        const pontosRestantes = points - (desconto * pontosPorEuro);
+
+        return {
+            valorFinal,
+            pontosRestantes,
+            desconto
+        };
+    }
+
+}
+
+class itemCarrinho {
+    constructor(id, quantidade, priceUnidade) {
+        this.id = id;
+        this.quantidade = quantidade;
+        this.priceUnidade = priceUnidade;
+    }
+
+    getTotal() {
+        return this.quantidade * this.priceUnidade;
+    }
 }
 
 class Carrinho {
     constructor() {
         this.id = generateSKU("cart");
-        this.itens = [];
+        this.items = [];
     }
 
-    adicionarProduto(id) {
-        this.itens.push(id);
+    adicionarProduto(id, quantidade, priceUnidade) {
+        const item = new itemCarrinho(id, quantidade, priceUnidade);
+        this.items.push(item);
     }
 
     removerProduto(id) {
-        const index = this.itens.indexOf(id);
-        if (index !== -1) {
-            this.itens.splice(index, 1);
+        this.items = this.items.filter(item => item.id !== id);
+    }
+
+    getTotal() {
+        return this.items.reduce((soma, item) => soma + item.getTotal(), 0);
+    }
+
+    adicionarPorNome(nome, quantidade, catalogo) {
+        const produto = [...catalogo.produtos.values()]
+            .find(p => p.name.toLowerCase() === nome.toLowerCase());
+
+        if (!produto) {
+            console.log("Produto não encontrado no catálogo.");
+            return;
         }
-    }
-}
 
-class Caixa {
-    constructor(carrinho) {
-        this.carrinho = carrinho;
+        this.adicionarProduto(produto.id, quantidade, produto.finalPrice);
+        console.log(`Produto '${produto.name}' adicionado ao carrinho.`);
     }
 
-    fecharConta() {
-        let total = this.carrinho.guardarPrice.reduce((a, b) => a + b, 0);
+    verCarrinho(catalogo) {
+        if (this.items.length === 0) {
+            console.log("O carrinho está vazio.");
+            return;
+        }
 
-        let lista = "";
-        this.carrinho.guardarID.forEach(id => {
-            const produto = products.find(p => p.id === id);
-            if (produto) {
-                lista += `${produto.name} | ${produto.manufacturer} | ${produto.finalPrice}€\n`;
-            }
+        console.log("\n--- Carrinho ---");
+
+        this.items.forEach(item => {
+            const produto = catalogo.getProduto(item.id);
+
+            console.log(
+                `${produto.name} | ${item.quantidade} unidades | ` +
+                `${item.priceUnidade}€ cada | Total: ${item.getTotal()}€`
+            );
         });
 
-        return `
-____________________________________________________________
-=========================== TALÃO ===========================
+        console.log("----------------");
+        console.log(`Total do carrinho: ${this.getTotal()}€\n`);
+    }
 
-Produtos:
-${lista}
-Total: ${total.toFixed(2)}€
+    removerPorNome(nome, quantidade, catalogo) {
+        const produto = [...catalogo.produtos.values()]
+            .find(p => p.name.toLowerCase() === nome.toLowerCase());
 
-============================================================
-`;
+        if (!produto) {
+            console.log("Produto não encontrado no catálogo.");
+            return;
+        }
+
+        const item = this.items.find(i => i.id === produto.id);
+
+        if (!item) {
+            console.log("Esse produto não está no carrinho.");
+            return;
+        }
+
+        if (quantidade >= item.quantidade) {
+            this.removerProduto(produto.id);
+            console.log(`Produto '${produto.name}' removido do carrinho.`);
+        } else {
+            item.quantidade -= quantidade;
+            console.log(
+                `Foram removidas ${quantidade} unidades de '${produto.name}'.`
+            );
+        }
     }
 }
 
-class MotorDePesquisa {
-    constructor(catalogo) {
-        this.catalogo = catalogo; 
+
+
+
+class Catalogo {
+    constructor() {
+        this.produtos = new Map();
     }
 
-    porNome(texto) {
-        const termo = texto.toLowerCase();
-        return [...this.catalogo.values()].filter(p =>
-            p.name.toLowerCase().includes(termo)
-        );
+    adicionarProduto(produto) {
+        if (!(produto instanceof Product)) {
+            throw new Error("Só é possível adicionar instâncias de Product.");
+        }
+
+        if (this.produtos.has(produto.id)) {
+            console.log("Produto já existe no catálogo.");
+            return;
+        }
+
+        this.produtos.set(produto.id, produto);
     }
 
-    porCategoria(categoria) {
-        return [...this.catalogo.values()].filter(p =>
-            p.category === categoria
-        );
+    getProduto(sku) {
+        return this.produtos.get(sku) || null;
     }
 
-    porFabricante(fabricante) {
-        const termo = fabricante.toLowerCase();
-        return [...this.catalogo.values()].filter(p =>
-            p.manufacturer.toLowerCase().includes(termo)
-        );
+    listarPorCategoria(categoria) {
+        const lista = [];
+
+        for (const produto of this.produtos.values()) {
+            if (produto.category === categoria) {
+                lista.push(produto);
+            }
+        }
+
+        return lista;
     }
 
-    porPreco(min = 0, max = Infinity) {
-        return [...this.catalogo.values()].filter(p =>
-            p.price >= min && p.price <= max
-        );
+    atualizarPreco(sku, novoPreco) {
+        const produto = this.getProduto(sku);
+
+        if (!produto) {
+            throw new Error("Produto não encontrado.");
+        }
+
+        produto.price = novoPreco;
+        produto.finalPrice = novoPreco * (1 + CATEGORIAS[produto.category].iva);
     }
 
-    pesquisar(query) {
-        const termo = query.toLowerCase();
-        return [...this.catalogo.values()].filter(p =>
-            p.name.toLowerCase().includes(termo) ||
-            p.category.toLowerCase().includes(termo) ||
-            p.manufacturer.toLowerCase().includes(termo)
-        );
+    listarTodos() {
+        return [...this.produtos.values()];
     }
 }
-
-class MotorDePrecos {
-    constructor(catalogo) {
-        this.catalogo = catalogo;
-
-        this.cupons = {
-            "ETIC10": { tipo: "percentual", valor: 0.10 },
-            "FRETEGRATIS": { tipo: "frete", valor: 0 },
-            "SEM-VIP": { tipo: "removerVIP" }
-        };
-    }
-
-    calcular({ cliente, itens, cupomCodigo = null }) {
-        let subtotal = 0;
-        let totalIVA = 0;
-        let descontos = 0;
-        let frete = 5; 
-
-        for (const item of itens) {
-            const produto = this.catalogo.get(item.id);
-            if (!produto) throw new Error("Produto não encontrado");
-
-            let quantidade = item.quantidade;
-
-            if (produto.category === "vestuario") {
-                const grupos = Math.floor(quantidade / 3);
-                const gratis = grupos; 
-                quantidade -= gratis;
-
-                descontos += gratis * produto.price;
-            }
-
-            const precoBase = produto.price * quantidade;
-            const iva = precoBase * CATEGORIAS[produto.category].iva;
-
-            subtotal += precoBase;
-            totalIVA += iva;
-        }
-
-        let descontoVIP = 0;
-        if (cliente.tipo === "VIP") {
-            descontoVIP = subtotal * 0.05;
-            descontos += descontoVIP;
-        }
-
-        if (cupomCodigo && this.cupons[cupomCodigo]) {
-            const cupom = this.cupons[cupomCodigo];
-
-            if (cupom.tipo === "percentual") {
-                const valor = subtotal * cupom.valor;
-                descontos += valor;
-            }
-
-            if (cupom.tipo === "frete") {
-                frete = 0;
-            }
-
-            if (cupom.tipo === "removerVIP") {
-                descontos -= descontoVIP; 
-            }
-        }
-
-        if (subtotal >= 500) {
-            descontos += 30;
-        }
-
-        const total = subtotal + totalIVA + frete - descontos;
-
-        return {
-            subtotal,
-            totalIVA,
-            frete,
-            descontos,
-            total,
-            cupomAplicado: cupomCodigo,
-            clienteTipo: cliente.tipo
-        };
-    }
-}
-
 
 //listas
 const CATEGORIAS = {
@@ -300,234 +310,112 @@ const CATEGORIAS = {
     }
 };
 
-const carrinho = new Carrinho();
+//menus
+function addName(catalogo, stock) {
+    rl.question("Insira o nome do Produto: ", name => {
+        name = validText(name, () => addName(catalogo, stock));
+        addPrice(name, catalogo, stock);
+    });
+}
 
-function adicionarProduto() {
+function addPrice(name, catalogo, stock) {
+    rl.question("Insira o preço: ", price => {
+        price = validNumber(price, () => addPrice(name, catalogo, stock));
+        addMaxParcelas(name, price, catalogo, stock);
+    });
+}
 
-    function pedirID() {
-        rl.question("ID: ", id => {
-            if (isNaN(id)) {
-                console.log("ID inválido.");
-                return pedirID();
-            }
-            pedirNome(Number(id));
-        });
-    }
+function addMaxParcelas(name, price, catalogo, stock) {
+    rl.question("Insira o máximo de parcelas: ", mParcelas => {
+        mParcelas = validNumber(mParcelas, () => addMaxParcelas(name, price, catalogo, stock));
+        addManufactur(name, price, mParcelas, catalogo, stock);
+    });
+}
 
-    function pedirNome(id) {
-        rl.question("Nome: ", name => {
-            if (!validText(name)) {
-                console.log("Nome inválido. Não pode conter números.");
-                return pedirNome(id);
-            }
-            pedirPreco(id, name);
-        });
-    }
+function addManufactur(name, price, mParcelas, catalogo, stock) {
+    rl.question("Insira a categoria: ", categoria => {
 
-    function pedirPreco(id, name) {
-        rl.question("Preço: ", price => {
-            if (isNaN(price)) {
-                console.log("Preço inválido.");
-                return pedirPreco(id, name);
-            }
-            pedirStock(id, name, Number(price));
-        });
-    }
+        if (!CATEGORIAS[categoria]) {
+            console.log("Categoria inválida.");
+            return addManufactur(name, price, mParcelas, catalogo, stock);
+        }
 
-    function pedirStock(id, name, price) {
-        rl.question("Stock: ", stock => {
-            if (isNaN(stock)) {
-                console.log("Stock inválido.");
-                return pedirStock(id, name, price);
-            }
-            pedirMaxParcelas(id, name, price, Number(stock));
-        });
-    }
+        rl.question("Insira o fabricante: ", manufactur => {
 
-    function pedirMaxParcelas(id, name, price, stock) {
-        rl.question("Max Parcelas: ", maxParcelas => {
-            if (isNaN(maxParcelas)) {
-                console.log("Max Parcelas inválido.");
-                return pedirMaxParcelas(id, name, price, stock);
-            }
-            pedirManufacturer(id, name, price, stock, Number(maxParcelas));
-        });
-    }
+            const lista = CATEGORIAS[categoria].fabricantes;
 
-    function pedirManufacturer(id, name, price, stock, maxParcelas) {
-        console.log("\nFabricantes disponíveis:");
-        products.forEach(f => console.log("- " + f));
-
-        rl.question("Fabricante: ", manufacturer => {
-            if (!validText(manufacturer)) {
-                console.log("Fabricante inválido.");
-                return pedirManufacturer(id, name, price, stock, maxParcelas);
+            if (!lista.includes(manufactur)) {
+                console.log("Fabricante não pertence a esta categoria.");
+                console.log("Fabricantes válidos:", lista.join(", "));
+                return addManufactur(name, price, mParcelas, catalogo, stock);
             }
 
-            manufacturer = normalizarTexto(manufacturer);
+            rl.question("Insira a quantidade em stock: ", quantidadeStr => {
 
-            pedirCategory(id, name, price, stock, maxParcelas, manufacturer);
-        });
-    }
+                const quantidade = Number(quantidadeStr);
 
-    function pedirCategory(id, name, price, stock, maxParcelas, manufacturer) {
-        console.log("\nCategorias disponíveis:");
-        CATEGORIAS.forEach(c => console.log("- " + c));
+                if (isNaN(quantidade) || quantidade <= 0) {
+                    console.log("Quantidade inválida. Deve ser um número maior que 0.");
+                    return addManufactur(name, price, mParcelas, catalogo, stock);
+                }
 
-        rl.question("Categoria: ", category => {
-            if (CATEGORIAS.includes(category)) {
-
-                const p = new Product(
+                console.log("Fabricante, categoria e quantidade válidos!");
+                const id = generateSKU(CATEGORIAS[categoria]);
+                const produto = new Product(
                     id,
                     name,
                     price,
-                    stock,
-                    maxParcelas,
-                    manufacturer,
-                    category
+                    mParcelas,
+                    manufactur,
+                    categoria
                 );
 
-                products.push(p);
-                console.log("Produto adicionado com sucesso!");
-                menu();
-            }
-            
-            return pedirCategory();
+                catalogo.adicionarProduto(produto);
+                stock.adicionarProduto(produto.id, quantidade);
 
-        });
-    }
-
-    pedirID();
-}
-
-function listarProdutos() {
-    if (products.length === 0) {
-        console.log("Nenhum produto cadastrado.");
-    } else {
-        products.forEach(p => console.log(p.info()));
-    }
-    adicionarAoCarrinho();
-}
-
-function pesquisarPreco() {
-    rl.question("Preço mínimo: ", min => {
-        rl.question("Preço máximo: ", max => {
-
-            const minP = Number(min);
-            const maxP = Number(max);
-
-            if (isNaN(minP) || isNaN(maxP)) {
-                console.log("Valores inválidos.");
-                return pesquisarPreco();
-            }
-
-            const resultados = products.filter(p => p.price >= minP && p.price <= maxP);
-
-            if (resultados.length === 0) console.log("Nenhum produto encontrado.");
-            else resultados.forEach(p => console.log(p.info()));
-
-            adicionarAoCarrinho();
-        });
-    });
-}
-
-function pesquisarCategoria() {
-    const categorias = [...new Set(products.map(p => p.category))];
-
-    console.log("\nCategorias disponíveis:");
-    categorias.forEach(c => console.log("- " + c));
-
-    rl.question("\nEscolha uma categoria: ", cat => {
-        cat = normalizarTexto(cat);
-
-        const resultados = products.filter(p => p.category === cat);
-
-        if (resultados.length === 0) console.log("Nenhum produto encontrado.");
-        else resultados.forEach(p => console.log(p.info()));
-
-        adicionarAoCarrinho();
-    });
-}
-
-
-function pesquisarFabricante() {
-    const fabricantes = [...new Set(products.map(p => p.manufacturer))];
-
-    console.log("\nFabricantes disponíveis:");
-    fabricantes.forEach(f => console.log("- " + f));
-
-    rl.question("\nEscolha um fabricante: ", fab => {
-        fab = normalizarTexto(fab);
-
-        const resultados = products.filter(p => p.manufacturer === fab);
-
-        if (resultados.length === 0) console.log("Nenhum produto encontrado.");
-        else resultados.forEach(p => console.log(p.info()));
-
-        adicionarAoCarrinho();
-    });
-}
-
-function dividirParcelas() {
-    rl.question("ID ou nome do produto: ", value => {
-
-        const produto = products.find(p =>
-            p.id == value || p.name.toLowerCase() === value.toLowerCase()
-        );
-
-        if (!produto) {
-            console.log("Produto não encontrado.");
-            return dividirParcelas();
-        }
-
-        rl.question("Número de parcelas: ", parcelas => {
-
-            if (isNaN(parcelas) || parcelas < 1 || parcelas > produto.maxParcelas) {
-                console.log(`Número de parcelas inválido. Máximo: ${produto.maxParcelas}`);
-                return dividirParcelas(); // repete só esta parte
-            }
-
-            console.log(produto.calcParcelas(Number(parcelas)));
-            menu();
-        });
-    });
-}
-
-function adicionarAoCarrinho() {
-    rl.question("Deseja adicionar algum produto ao carrinho (sim/nao): ", resp => {
-
-        if (resp.toLowerCase() === "sim" || resp.toLowerCase() === "s") {
-
-            rl.question("Insira o nome do produto ou o ID: ", value => {
-
-                const produto = products.find(p =>
-                    p.id == value || p.name.toLowerCase() === value.toLowerCase()
-                );
-
-                if (!produto) {
-                    console.log("Produto não encontrado.");
-                    return adicionarAoCarrinho();
-                }
-
-                carrinho.adicionarProduto(produto.id, produto.price);
-
-                console.log("Produto adicionado com sucesso!");
-
-                return adicionarAoCarrinho();
+                console.log("Produto criado:");
+                console.log(produto);
             });
-
-        } else {
-            menu();
-        }
+        });
     });
 }
 
-function pagar() {
-    const conta = new Caixa(carrinho);
-    console.log(conta.fecharConta());
+
+function perguntarAdicionarCarrinho(carrinho, catalogo, rl) {
+    rl.question("Nome do produto a adicionar: ", nome => {
+        rl.question("Quantidade: ", quantidadeStr => {
+            const quantidade = Number(quantidadeStr);
+
+            if (isNaN(quantidade) || quantidade <= 0) {
+                console.log("Quantidade inválida.");
+                return perguntarAdicionarCarrinho(carrinho, catalogo, rl);
+            }
+
+            carrinho.adicionarPorNome(nome, quantidade, catalogo);
+        });
+    });
 }
 
-//menus
+function perguntarRemoverCarrinho(carrinho, catalogo, rl) {
+    rl.question("Nome do produto a remover: ", nome => {
+        rl.question("Quantidade a remover: ", quantidadeStr => {
+            const quantidade = Number(quantidadeStr);
+
+            if (isNaN(quantidade) || quantidade <= 0) {
+                console.log("Quantidade inválida.");
+                return perguntarRemoverCarrinho(carrinho, catalogo, rl);
+            }
+
+            carrinho.removerPorNome(nome, quantidade, catalogo);
+        });
+    });
+}
+
+function perguntarVerCarrinho(carrinho, catalogo) {
+    carrinho.verCarrinho(catalogo);
+}
+
+
 function menu() {
     console.log(`
 
@@ -556,26 +444,35 @@ function menu() {
 function menuAdmin() {
     console.log(`
 === ADMIN ===
-1 - Adicionar item
+1 - Adicionar item  //done
 2 - Remover item
 3 - Alterar item
 4 - Ver recibos de compras
 0 - Voltar
 `);
 
-    rl.question("Escolha: ", async opcao => {
+    rl.question("Escolha: ", opcao => {
         switch (opcao) {
 
-            case "1": await adminAdicionarItem(); break;
-            case "2": await adminRemoverItem(); break;
-            case "3": await adminAlterarItem(); break;
-            case "4": adminVerRecibos(); break;
-            case "0": return menu();
+            case "1": 
+                addName(); 
+                break;
+            case "2": 
+                adminRemoverItem(); 
+                break;
+            case "3": 
+                adminAlterarItem(); 
+                break;
+            case "4": 
+                adminVerRecibos(); 
+                break;
+            case "0": 
+                return menu();
 
             default:
                 console.log("Opção inválida");
+                menuAdmin();
         }
-        menuAdmin();
     });
 }
 
@@ -592,9 +489,9 @@ function menuClient(isVIP) {
 
     console.log(`
 === CLIENTE ${isVIP ? "(VIP)" : ""} ===
-1 - Ver items
-2 - Procurar por categoria
-3 - Adicionar ao carrinho
+1 - Ver items   //done
+2 - Procurar por categoria  //done
+3 - Adicionar ao carrinho   //done
 4 - Remover do carrinho
 5 - Ver carrinho
 6 - Pagar
@@ -604,17 +501,19 @@ function menuClient(isVIP) {
     rl.question("Escolha: ", async opcao => {
         switch (opcao) {
 
-            case "1": clientVerItems(); break;
-            case "2": await clientProcurarCategoria(); break;
-            case "3": await clientAdicionarCarrinho(cliente); break;
-            case "4": await clientRemoverCarrinho(cliente); break;
-            case "5": clientVerCarrinho(cliente); break;
+            case "1": catalogo.listarTodos(); break;
+            case "2": await catalogo.listarPorCategoria(); break;
+            case "3": await perguntarAdicionarCarrinho(carrinho, catalogo, rl); break;
+            case "4": await perguntarRemoverCarrinho(carrinho, catalogo, rl); break;
+            case "5": perguntarVerCarrinho(carrinho, catalogo); break;
             case "6": await clientPagar(cliente); break;
             case "0": return menu();
-
             default:
-                console.log("Opção inválida");
+                console.log("Opção invalida!");
+                return
         }
         menuClient(isVIP);
     });
 }
+
+menu();
