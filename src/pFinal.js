@@ -29,7 +29,6 @@ function generateSKU(category) {
     return `${code}-${timestamp}-${random}`;
 }
 
-
 function validText(valor, repetir) {
   let texto = String(valor).trim();
 
@@ -76,7 +75,6 @@ class Stock {
     }
 }
 
-
 class Product {
     constructor(name, price, maxParcelas, manufacturer, category) {
         this.id = generateSKU(category);
@@ -88,33 +86,11 @@ class Product {
         this.finalPrice = price * (1 + CATEGORIAS[category].iva);
     }
 
-    info() {
-        return `${this.name} | ${this.manufacturer} | ${this.category} | ${this.stock} unidades | ${this.maxParcelas}x | ${this.finalPrice}€`;
+    info(stock) {
+        const quantidade = stock.getQuantidade(this.id);
+        return `${this.name} | ${this.manufacturer} | ${this.category} | ${quantidade} unidades | ${this.maxParcelas}x | ${this.finalPrice}€`;
     }
 
-}
-
-class SistemaLoja {
-    constructor(estoque, carrinho) {
-        this.estoque = estoque;
-        this.carrinho = carrinho;
-    }
-
-    adicionarProduto(userType, sku, quantidade = 1) {
-        if (userType === "admin") {
-            this.estoque.adicionar(sku, quantidade);
-        } else {
-            this.carrinho.adicionarProduto(sku);
-        }
-    }
-
-    removerProduto(userType, sku, quantidade = 1) {
-        if (userType === "admin") {
-            this.estoque.remover(sku, quantidade);
-        } else {
-            this.carrinho.removerProduto(sku);
-        }
-    }
 }
 
 class User {
@@ -146,7 +122,6 @@ class Carrinho {
     }
 }
 
-
 class Caixa {
     constructor(carrinho) {
         this.carrinho = carrinho;
@@ -155,11 +130,6 @@ class Caixa {
     fecharConta() {
         let total = this.carrinho.guardarPrice.reduce((a, b) => a + b, 0);
 
-        if (total > 500) {
-            total *= 0.9; // 10% desconto
-        }
-
-        // Construir lista de produtos
         let lista = "";
         this.carrinho.guardarID.forEach(id => {
             const produto = products.find(p => p.id === id);
@@ -180,6 +150,127 @@ Total: ${total.toFixed(2)}€
 `;
     }
 }
+
+class MotorDePesquisa {
+    constructor(catalogo) {
+        this.catalogo = catalogo; 
+    }
+
+    porNome(texto) {
+        const termo = texto.toLowerCase();
+        return [...this.catalogo.values()].filter(p =>
+            p.name.toLowerCase().includes(termo)
+        );
+    }
+
+    porCategoria(categoria) {
+        return [...this.catalogo.values()].filter(p =>
+            p.category === categoria
+        );
+    }
+
+    porFabricante(fabricante) {
+        const termo = fabricante.toLowerCase();
+        return [...this.catalogo.values()].filter(p =>
+            p.manufacturer.toLowerCase().includes(termo)
+        );
+    }
+
+    porPreco(min = 0, max = Infinity) {
+        return [...this.catalogo.values()].filter(p =>
+            p.price >= min && p.price <= max
+        );
+    }
+
+    pesquisar(query) {
+        const termo = query.toLowerCase();
+        return [...this.catalogo.values()].filter(p =>
+            p.name.toLowerCase().includes(termo) ||
+            p.category.toLowerCase().includes(termo) ||
+            p.manufacturer.toLowerCase().includes(termo)
+        );
+    }
+}
+
+class MotorDePrecos {
+    constructor(catalogo) {
+        this.catalogo = catalogo;
+
+        this.cupons = {
+            "ETIC10": { tipo: "percentual", valor: 0.10 },
+            "FRETEGRATIS": { tipo: "frete", valor: 0 },
+            "SEM-VIP": { tipo: "removerVIP" }
+        };
+    }
+
+    calcular({ cliente, itens, cupomCodigo = null }) {
+        let subtotal = 0;
+        let totalIVA = 0;
+        let descontos = 0;
+        let frete = 5; 
+
+        for (const item of itens) {
+            const produto = this.catalogo.get(item.id);
+            if (!produto) throw new Error("Produto não encontrado");
+
+            let quantidade = item.quantidade;
+
+            if (produto.category === "vestuario") {
+                const grupos = Math.floor(quantidade / 3);
+                const gratis = grupos; 
+                quantidade -= gratis;
+
+                descontos += gratis * produto.price;
+            }
+
+            const precoBase = produto.price * quantidade;
+            const iva = precoBase * CATEGORIAS[produto.category].iva;
+
+            subtotal += precoBase;
+            totalIVA += iva;
+        }
+
+        let descontoVIP = 0;
+        if (cliente.tipo === "VIP") {
+            descontoVIP = subtotal * 0.05;
+            descontos += descontoVIP;
+        }
+
+        if (cupomCodigo && this.cupons[cupomCodigo]) {
+            const cupom = this.cupons[cupomCodigo];
+
+            if (cupom.tipo === "percentual") {
+                const valor = subtotal * cupom.valor;
+                descontos += valor;
+            }
+
+            if (cupom.tipo === "frete") {
+                frete = 0;
+            }
+
+            if (cupom.tipo === "removerVIP") {
+                descontos -= descontoVIP; 
+            }
+        }
+
+        if (subtotal >= 500) {
+            descontos += 30;
+        }
+
+        const total = subtotal + totalIVA + frete - descontos;
+
+        return {
+            subtotal,
+            totalIVA,
+            frete,
+            descontos,
+            total,
+            cupomAplicado: cupomCodigo,
+            clienteTipo: cliente.tipo
+        };
+    }
+}
+
 
 //listas
 const CATEGORIAS = {
@@ -211,42 +302,6 @@ const CATEGORIAS = {
 
 const carrinho = new Carrinho();
 
-
-//menu
-function menu() {
-    console.log(`
-
-Menu
-
-1. Adicionar produto
-2. Listar produtos
-3. Pesquisar por preço (min/max)
-4. Pesquisar por categoria
-5. Pesquisar por fabricante
-6. Pagar em parcelas
-7. Pagar total
-0. Sair
-`);
-
-    rl.question("Escolha uma opção: ", opcao => {
-        switch (opcao) {
-            case "1": adicionarProduto(); break;
-            case "2": listarProdutos(); break;
-            case "3": pesquisarPreco(); break;
-            case "4": pesquisarCategoria(); break;
-            case "5": pesquisarFabricante(); break;
-            case "6": dividirParcelas(); break;
-            case "7": pagar(); break;
-            case "0": rl.close(); break;
-            default:
-                console.log("Opção inválida");
-                menu();
-        }
-    });
-}
-
-
-//add produtos, as seguintes funções são responsaveis por pedir o valor de cada campo, tal como verificar se é valido
 function adicionarProduto() {
 
     function pedirID() {
@@ -301,7 +356,7 @@ function adicionarProduto() {
 
     function pedirManufacturer(id, name, price, stock, maxParcelas) {
         console.log("\nFabricantes disponíveis:");
-        .forEach(f => console.log("- " + f));
+        products.forEach(f => console.log("- " + f));
 
         rl.question("Fabricante: ", manufacturer => {
             if (!validText(manufacturer)) {
@@ -472,4 +527,94 @@ function pagar() {
     console.log(conta.fecharConta());
 }
 
-menu();
+//menus
+function menu() {
+    console.log(`
+
+        MENU
+1-Admin
+2-Client
+3-VIP
+4-DEMO
+0-Sair
+`);
+
+    rl.question("Escolha uma opção: ", opcao => {
+        switch (opcao) {
+            case "1": menuAdmin(); break;
+            case "2": menuClient(false); break;
+            case "3": menuClient(true); break;
+            case "4": DEMO(); break;
+            case "0": rl.close(); break;
+            default:
+                console.log("Opção inválida");
+                menu();
+        }
+    });
+}
+
+function menuAdmin() {
+    console.log(`
+=== ADMIN ===
+1 - Adicionar item
+2 - Remover item
+3 - Alterar item
+4 - Ver recibos de compras
+0 - Voltar
+`);
+
+    rl.question("Escolha: ", async opcao => {
+        switch (opcao) {
+
+            case "1": await adminAdicionarItem(); break;
+            case "2": await adminRemoverItem(); break;
+            case "3": await adminAlterarItem(); break;
+            case "4": adminVerRecibos(); break;
+            case "0": return menu();
+
+            default:
+                console.log("Opção inválida");
+        }
+        menuAdmin();
+    });
+}
+
+function menuClient(isVIP) {
+    const cliente = {
+        id: 1,
+        nome: isVIP ? "Cliente VIP" : "Cliente Normal",
+        tipo: isVIP ? "VIP" : "REGULAR"
+    };
+
+    if (!loja.obterCarrinho(cliente.id)) {
+        loja.criarCarrinho(cliente.id);
+    }
+
+    console.log(`
+=== CLIENTE ${isVIP ? "(VIP)" : ""} ===
+1 - Ver items
+2 - Procurar por categoria
+3 - Adicionar ao carrinho
+4 - Remover do carrinho
+5 - Ver carrinho
+6 - Pagar
+0 - Voltar
+`);
+
+    rl.question("Escolha: ", async opcao => {
+        switch (opcao) {
+
+            case "1": clientVerItems(); break;
+            case "2": await clientProcurarCategoria(); break;
+            case "3": await clientAdicionarCarrinho(cliente); break;
+            case "4": await clientRemoverCarrinho(cliente); break;
+            case "5": clientVerCarrinho(cliente); break;
+            case "6": await clientPagar(cliente); break;
+            case "0": return menu();
+
+            default:
+                console.log("Opção inválida");
+        }
+        menuClient(isVIP);
+    });
+}
